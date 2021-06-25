@@ -24,16 +24,16 @@ jobs:
             async function getAuthorLogin(issue) {
                 core.info(`getAuthorLogin called with ${issue}`);
 
-                const fullIssue = (await github.issues.get({ ...issue })).data;
+                const fullIssue = (await github.issues.get(issue)).data;
 
                 if (!fullIssue) {
-                  throw Error('fullIssue is undefined')
+                  throw Error('Could not get details of ${issue}')
                 }
 
                 const user = fullIssue.user;
 
-                if (!result) {
-                    throw Error(`Could not get author of ${issue}`);
+                if (!user) {
+                    throw Error(`Could not get user of ${issue}`);
                 }
 
                 return user.login;
