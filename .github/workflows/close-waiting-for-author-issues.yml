@@ -1,0 +1,108 @@
+on:
+  schedule:
+    # Run daily at midnight.
+    cron: '0 0 * * *'
+
+jobs:
+  close-waiting-for-author-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v4
+        with:
+          script: |
+            const labelName = "waiting-for-author";
+            const daysUntilClose = 0.0000115741;
+            const closingCommentBody = `This issue has been closed because the author has not replied in ${daysUntilClose} days. @{{author}} please reply to the comments above to get this issue re-opened. Thanks!`;
+
+            const repo = context.repo;
+
+            async function getAuthorLogin(issue) {
+                core.info(`getAuthorLogin called with ${issue}`);
+                const result = (await github.issues.get({ ...issue })).data?.user?.login;
+
+                if (!result) {
+                    throw Error(`Could not get author of ${issue}`);
+                }
+
+                return result;
+            }
+
+            async function* getEvents(issue) {
+                core.info(`getEvents called with ${issue}`);
+                for (let page = 1; ; page++) {
+                    const events = (
+                        await github.issues.listEvents({
+                            ...issue,
+                            per_page: 100,
+                            page,
+                        })
+                    ).data;
+
+                    if (events.length === 0) break;
+
+                    yield* events;
+                }
+            }
+
+            async function* getIssues() {
+                core.info(`getIssues called with ${issue}`);
+
+                for (let page = 1; ; page++) {
+                    const issues = (
+                        await github.issues.listForRepo({
+                            ...repo,
+                            state: "open",
+                            sort: "updated",
+                            direction: "desc",
+                            labels: labelName,
+                            per_page: 100,
+                            page,
+                        })
+                    ).data;
+
+                    if (issues.length === 0) break;
+
+                    yield* issues.map((issue) => ({
+                        ...this.repo,
+                        issue_number: issue.number,
+                    }));
+                }
+            }
+
+            for await (const issue of getIssues()) {
+                core.info(`Processing ${issue}`);
+
+                let labeledEvent;
+
+                for await (const event of getEvents(issue)) {
+                    if (event.event !== "labeled" || event.label.name !== labelName)
+                        continue;
+
+                    labeledEvent = event;
+
+                    core.info(`Found labeling event ${event}`);
+                }
+
+                if (labeledEvent === undefined) return;
+
+                const date = new Date(labeledEvent.created_at);
+
+                core.info(`event date is ${date}`);
+                const currentDate = new Date();
+
+                core.info(`Current date is ${currentDate}`);
+
+                if (
+                    currentDate.valueOf() - date.valueOf() >
+                    daysUntilClose * 86400000 /* milliseconds per day */
+                ) {
+                    await github.issues.createComment({
+                        ...issue,
+                        body: closingCommentBody.replace(
+                            "{{author}}",
+                            await getAuthorLogin(issue)
+                        ),
+                    });
+                    await github.issues.update({ ...issue, state: "closed" });
+                }
+            }
