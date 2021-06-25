@@ -8,15 +8,11 @@ jobs:
   close-waiting-for-author-issues:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 14
-
       - uses: actions/github-script@v4
         with:
           script: |
             const labelName = "waiting-for-author";
-            const daysUntilClose = 0.0000115741;
+            const daysUntilClose = 0.00347222;
             const closingCommentBody = `This issue has been closed because the author has not replied in ${daysUntilClose} days. @{{author}} please reply to the comments above to get this issue re-opened. Thanks!`;
 
             const repo = context.repo;
