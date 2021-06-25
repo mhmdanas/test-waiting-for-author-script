@@ -57,8 +57,6 @@ jobs:
             }
 
             async function* getIssues() {
-                core.info(`getIssues called with ${issue}`);
-
                 for (let page = 1; ; page++) {
                     const issues = (
                         await github.issues.listForRepo({
