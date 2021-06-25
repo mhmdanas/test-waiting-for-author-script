@@ -68,7 +68,7 @@ jobs:
                     if (issues.length === 0) break;
 
                     yield* issues.map((issue) => ({
-                        ...this.repo,
+                        ...repo,
                         issue_number: issue.number,
                     }));
                 }
