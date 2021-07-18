@@ -1,0 +1,34 @@
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  close-waiting-for-author-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v4
+        with:
+          script: |
+            const labelName = "waiting-for-author";
+
+            console.log(context.payload);
+
+            let originalIssue = context.issue;
+
+            originalIssue = {
+              owner: originalIssue.owner,
+              repo: originalIssue.repo,
+              issue_number: originalIssue.number,
+            };
+
+            const issue = (await github.issues.get(originalIssue)).data;
+
+            if (context.payload.comment.user.login == issue.user.login) {
+                if (issue.state != "open") {
+                    await github.issues.update({ ...originalIssue, state: "open" });
+                }
+
+                if (issue.labels.map((label) => label.name).includes(labelName)) {
+                    await github.issues.removeLabel({ ...originalIssue, name: labelName });
+                }
+            }

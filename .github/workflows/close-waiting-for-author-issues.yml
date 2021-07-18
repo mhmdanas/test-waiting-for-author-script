@@ -23,7 +23,7 @@ jobs:
                 const fullIssue = (await github.issues.get(issue)).data;
 
                 if (!fullIssue) {
-                  throw Error('Could not get details of ${issue}')
+                  throw Error('Could not get details of ${issue}');
                 }
 
                 const user = fullIssue.user;
