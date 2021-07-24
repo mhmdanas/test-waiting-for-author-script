@@ -12,8 +12,11 @@ jobs:
         with:
           script: |
             const labelName = "waiting-for-author";
-            const daysUntilClose = 0.00347222;
-            const closingCommentBody = `This issue has been closed because the author has not replied in ${daysUntilClose} days. @{{author}} please reply to the comments above to get this issue re-opened. Thanks!`;
+            const daysUntilIssueClose = 0.00347222; // = 5 minutes
+            const closingIssueCommentBody = `This issue has been closed because the author has not replied in ${daysUntilIssueClose} days. @{{author}} please reply to the comments above to get this issue re-opened. Thanks!`;
+
+            const daysUntilPullClose = 0.0069; // = 10 minutes
+            const closingPullCommentBody = `This pull request has been closed because the author has not replied in ${daysUntilPullClose} days. @{{author}} please reply to the comments above to get this pull request re-opened. Thanks!`;
 
             const repo = context.repo;
 
@@ -98,13 +101,17 @@ jobs:
 
                 core.info(`Current date is ${currentDate}`);
 
+                const daysUntilClose = issue.pull_request ? daysUntilPullClose : daysUntilIssueClose;
+
                 if (
                     currentDate.valueOf() - date.valueOf() >
                     daysUntilClose * 86400000 /* milliseconds per day */
                 ) {
+                    const commentBody = issue.pull_request ? closingPullCommentBody : closingIssueCommentBody;
+
                     await github.issues.createComment({
                         ...issue,
-                        body: closingCommentBody.replace(
+                        body: commentBody.replace(
                             "{{author}}",
                             await getAuthorLogin(issue)
                         ),
